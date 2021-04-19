@@ -125,7 +125,7 @@ fn load_dict(filename: String) -> Result<HashMap<char, Vec<String>>, std::io::Er
     for word in words {
         // FIXME: Is there a better way to handle this other than using unwrap?
         let w = word.chars().next().unwrap().clone();
-        let mut mw = word.clone();
+        let mw = word.clone();
         dict.get_mut(&w).unwrap().push(mw);
     }
 
@@ -147,11 +147,19 @@ fn load_image_to_matrix(filename: String) -> Vec<Vec<char>> {
     let text = tba.get_utf8_text().unwrap();
     let string = text.as_ref().to_str().unwrap().to_string();
     let split = string.split('\n').collect::<Vec<&str>>();
-    let grid: Vec<Vec<char>> = split[0..7].into_iter().map(|line| {
-        // Below filter is needed because sometimes Tesseract detects whitespace between the
-        // characters
-        line.chars().filter(|c| c != &' ').collect()
-    }).collect();
+    let grid: Vec<Vec<char>> = split
+        .into_iter()
+        // Below filter is needed because sometimes Tesseract detects the vertical whitespace as
+        // extra lines
+        .filter(|v| v != &"")
+        .collect::<Vec<_>>()[0..7]
+        .into_iter()
+        .map(|line| {
+            // Below filter is needed because sometimes Tesseract detects whitespace between the
+            // characters
+            line.chars().filter(|c| c != &' ').collect()
+        })
+        .collect();
     // TODO: Implement better error handling
     if grid.len() != 7 || grid[0].len() != 7 {
         panic!("Image couldn't be scanned correctly. Here is grid\n{:?}", grid)
@@ -185,13 +193,15 @@ fn main() {
             get_words
         };
         let dict = load_dict(args[1].clone()).unwrap();
+
         let grid = &load_image_to_matrix(args[2].clone());
         let mut words = algo_selection(grid, dict).into_iter().collect::<Vec<_>>();
         words.sort_by_key(|k| {
             k.chars().collect::<Vec<char>>().len()
         });
+        let filtered = words.into_iter().filter(|s| s.contains("y")).collect::<Vec<_>>();
 
-        println!("{:?}", words);
+        println!("{:?}", filtered);
     }
 }
 
